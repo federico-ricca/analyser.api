@@ -1,0 +1,6 @@
+*.class
+**/target/
+application.properties
+.classpath
+.project
+.settings/
