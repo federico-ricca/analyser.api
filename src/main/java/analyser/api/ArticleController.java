@@ -11,13 +11,13 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import analyser.api.analysis.SpringBrokerAnalysisService;
+import analyser.api.data.Article;
 import analyser.api.data.ArticleRepository;
 
 @RestController
 public class ArticleController {
 
 	@Autowired
-	// private IndicoAnalysisService analysisService;
 	private SpringBrokerAnalysisService analysisService;
 
 	@Autowired
@@ -46,6 +46,23 @@ public class ArticleController {
 			response.setKeywords(keywords);
 			response.setStatus("ok");
 
+		} catch (Exception e) {
+			response.setStatus("error");
+			response.setMessage(e.getMessage());
+		}
+
+		return new ResponseEntity<AnalysisResponse>(response, HttpStatus.OK);
+	}
+
+	@RequestMapping(value = "/v1/storeArticle", method = RequestMethod.POST)
+	public ResponseEntity<AnalysisResponse> storeArticle(
+			@RequestBody Article article) {
+		AnalysisResponse response = new AnalysisResponse();
+
+		try {
+			articleRepository.store(article);
+
+			response.setStatus("ok");
 		} catch (Exception e) {
 			response.setStatus("error");
 			response.setMessage(e.getMessage());

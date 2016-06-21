@@ -4,11 +4,14 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.PostConstruct;
+
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,15 +22,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Component
 public class ArticleRepository {
-	private static final String INDEX_NAME = "articles";
-	private static final String TYPE_NAME = "raw_articles";
+	private static final String INDEX_NAME_KEY = "elastic.source.index.articles";
+	private static final String TYPE_NAME_KEY = "elastic.source.index.articles.types.raw_articles";
 
 	private Client client;
 
 	@Autowired
 	Environment environment;
 
-	private void initClient() {
+	private String indexName;
+	private String typeName;
+
+	@PostConstruct
+	public void initClient() {
 		if (client == null) {
 			client = TransportClient
 					.builder()
@@ -40,11 +47,15 @@ public class ArticleRepository {
 											Integer.parseInt(environment
 													.getProperty("elasticsearch.port")))));
 		}
+
+		indexName = environment.getProperty(INDEX_NAME_KEY);
+		typeName = environment.getProperty(TYPE_NAME_KEY);
+
+		System.out.println("Using " + INDEX_NAME_KEY + " = " + indexName);
+		System.out.println("Using " + TYPE_NAME_KEY + " = " + typeName);
 	}
 
 	public List<Article> getAllDocuments() {
-		this.initClient();
-
 		int scrollSize = 5000;
 
 		List<Article> esData = new ArrayList<Article>();
@@ -53,7 +64,7 @@ public class ArticleRepository {
 		ObjectMapper mapper = new ObjectMapper();
 
 		while (response == null || response.getHits().hits().length != 0) {
-			response = client.prepareSearch(INDEX_NAME).setTypes(TYPE_NAME)
+			response = client.prepareSearch(indexName).setTypes(typeName)
 					.setQuery(QueryBuilders.matchAllQuery())
 					.setSize(scrollSize).setFrom(i * scrollSize).execute()
 					.actionGet();
@@ -71,9 +82,15 @@ public class ArticleRepository {
 		return esData;
 	}
 
-	public void store(Article article) {
-		IndexResponse response = client.prepareIndex(INDEX_NAME, TYPE_NAME)
-				.setSource(article).get();
+	public void store(Article article) throws Exception {
+		IndexResponse response = client
+				.prepareIndex(indexName, typeName)
+				.setSource(
+						XContentFactory.jsonBuilder().startObject()
+								.field("author", article.getAuthor())
+								.field("title", article.getTitle())
+								.field("article", article.getArticle())
+								.endObject()).get();
 		if (!response.isCreated()) {
 			System.out.println("Warning, object not created: " + article);
 		}

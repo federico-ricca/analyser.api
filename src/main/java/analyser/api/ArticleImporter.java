@@ -6,7 +6,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import analyser.api.analysis.IndicoAnalysisService;
+import analyser.api.analysis.SpringBrokerAnalysisService;
 import analyser.api.data.Article;
 import analyser.api.data.ArticleRepository;
 import analyser.api.data.ProcessedArticle;
@@ -21,7 +21,7 @@ public class ArticleImporter {
 	private ProcessedArticleRepository processedArticleRepository;
 
 	@Autowired
-	private IndicoAnalysisService analysisService;
+	private SpringBrokerAnalysisService analysisService;
 
 	@Autowired
 	private AppState state;
@@ -34,7 +34,16 @@ public class ArticleImporter {
 		List<Article> articles = articleRepository.getAllDocuments();
 		List<ProcessedArticle> processedArticles = new ArrayList<ProcessedArticle>();
 
-		articles.forEach(item -> {
+		int c = articles.size();
+		int s = 0;
+
+		if (c > 0) {
+			s = c / 10;
+		}
+
+		int i = 0;
+
+		for (Article item : articles) {
 			try {
 				List<String> keywords = analysisService.extractKeywords(item
 						.getArticle());
@@ -46,12 +55,18 @@ public class ArticleImporter {
 				processedArticle.setTitle(item.getTitle());
 
 				processedArticles.add(processedArticle);
+
+				if (i % s == 0) {
+					if (i > 0)
+						System.out.println((i * 100.0) / c);
+				}
 			} catch (Exception e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-		});
+			i++;
+		}
 
+		System.out.println("Saving data...");
 		processedArticleRepository.storeAll(processedArticles);
 
 		state.online();

@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 
+import javax.annotation.PostConstruct;
+
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
@@ -15,15 +17,19 @@ import org.springframework.stereotype.Component;
 
 @Component
 public final class ProcessedArticleRepository {
-	private static final String INDEX_NAME = "articles";
-	private static final String TYPE_NAME = "processed_articles";
+	private static final String INDEX_NAME_KEY = "elastic.dest.index.articles";
+	private static final String TYPE_NAME_KEY = "elastic.dest.index.articles.types.processed_articles";
 
 	private Client client;
 
 	@Autowired
 	Environment environment;
 
-	private void initClient() {
+	private String indexName;
+	private String typeName;
+
+	@PostConstruct
+	public void initClient() {
 		if (client == null) {
 			client = TransportClient
 					.builder()
@@ -36,15 +42,19 @@ public final class ProcessedArticleRepository {
 											Integer.parseInt(environment
 													.getProperty("elasticsearch.port")))));
 		}
+
+		indexName = environment.getProperty(INDEX_NAME_KEY);
+		typeName = environment.getProperty(TYPE_NAME_KEY);
+		
+		System.out.println("Using " + INDEX_NAME_KEY + " = " + indexName);
+		System.out.println("Using " + TYPE_NAME_KEY + " = " + typeName);
 	}
 
 	public void store(ProcessedArticle processedArticle) {
-		this.initClient();
-
 		IndexResponse response;
 		try {
 			response = client
-					.prepareIndex(INDEX_NAME, TYPE_NAME)
+					.prepareIndex(indexName, typeName)
 					.setSource(
 							XContentFactory
 									.jsonBuilder()
@@ -53,7 +63,7 @@ public final class ProcessedArticleRepository {
 											processedArticle.getAuthor())
 									.field("title", processedArticle.getTitle())
 									.field("keywords",
-											processedArticle.getKeywords())
+											processedArticle.getKeywords() != null ? processedArticle.getKeywords() : "")
 									.field("article",
 											processedArticle.getArticle())
 									.endObject()).get();
