@@ -1,5 +1,6 @@
 package analyser.api;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +44,17 @@ public class ArticleController {
 			List<String> keywords = analysisService.extractKeywords(content
 					.getText());
 
-			response.setKeywords(keywords);
+			int minLength = Integer.parseInt(content.getMinLength());
+			
+			List<String> filteredKeywords = new ArrayList<String>();
+			
+			keywords.forEach(s -> {
+				if (s.length() >= minLength) {
+					filteredKeywords.add(s);
+				}
+			});
+			
+			response.setKeywords(filteredKeywords);
 			response.setStatus("ok");
 
 		} catch (Exception e) {

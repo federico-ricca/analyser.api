@@ -4,9 +4,13 @@ import io.indico.Indico;
 import io.indico.api.text.TextTag;
 import io.indico.api.utils.IndicoException;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
@@ -21,15 +25,22 @@ public final class IndicoAnalysisService {
 	
 	private Indico indico;
 
-	private void initClient() throws IndicoException {
-		if (indico == null) {
-			indico = new Indico(environment.getProperty(INDICO_API_KEY));
-		}
+	@PostConstruct
+	public void initClient() throws IndicoException {
+		indico = new Indico(environment.getProperty(INDICO_API_KEY));
 	}
 
+	public List<Double> relevance(String text, List<String> keywords) throws Exception {
+		List<Double> relevanceList = new ArrayList<Double>();
+		
+		Map<String, Object> map = new HashMap<String, Object>();
+		
+		keywords.forEach(item -> map.put(item, item));
+		
+		return indico.relevance.predict(text, keywords.toArray()).getRelevance();
+	}
+	
 	public List<String> extractKeywords(String text) throws Exception {
-		this.initClient();
-
 		if ((text == null) || (text.isEmpty())) {
 			return new ArrayList<String>();
 		}

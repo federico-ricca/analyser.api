@@ -29,6 +29,9 @@ public class SpringBrokerAnalysisService {
 	@Autowired
 	private Environment environment;
 
+	@Autowired
+	private IndicoAnalysisService indicoAnalysisService;
+	
 	public List<String> extractKeywords(String text) throws Exception {
 		CloseableHttpClient httpclient = HttpClients.createDefault();
 
@@ -85,6 +88,12 @@ public class SpringBrokerAnalysisService {
 						result.add(keyword);
 					}
 				}
+				
+				List<Double> relevanceList = indicoAnalysisService.relevance(plainText, result);
+				
+				relevanceList.forEach(d -> {
+					System.out.println("relevance: " + d);
+				});
 			}
 		}
 
